@@ -37,16 +37,17 @@ This project processes a dataset of 911 incidents responcees and analyzes the ti
 - A summary table is created which shows the number of incidents that had wait times of 1+ minute, 5+ minutes, 10+ minutes, and 15+ minutes in each week.
 - This summary table is exported to a CSV file.
 
+## Data Visualization and Summary:
 
-# Data Visualization and Summary:
+- Various statistics, such as the total number of incidents and the average wait time, are calculated.
+- A summary of the findings is printed, which includes:
+- Total number of incidents.
+- Average wait time.
+- Number of incidents where the wait time was 5+ minutes, 10+ minutes, and 15+ minutes.
 
-Various statistics, such as the total number of incidents and the average wait time, are calculated.
-A summary of the findings is printed, which includes:
-Total number of incidents.
-Average wait time.
-Number of incidents where the wait time was 5+ minutes, 10+ minutes, and 15+ minutes.
+# RESULTS:
 
-
+![Alt text](analysis.png)
 
 ---
 
