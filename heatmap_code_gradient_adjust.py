@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 import folium
 import folium.plugins as plugins
-from sklearn.neighbors import KernelDensity
+# from sklearn.neighbors import KernelDensity
+import sklearn
 
 
 STATION_1 = [45.5219553, -122.6732621]
