@@ -53,11 +53,9 @@ def visualize_timeline(file_path, units: list, date: str, start_time: str = '00:
     # Plot timelines for PSR1 and PSR3 using the filtered data
     for unit in units:
         plot_unit_timeline(ax, filtered_activity[filtered_activity['unit'] == unit], unit, start_time, end_time)
-    # plot_unit_timeline(ax, filtered_activity[filtered_activity['unit'] == 'PSR1'], 'PSR1', start_time, end_time)
-    # plot_unit_timeline(ax, filtered_activity[filtered_activity['unit'] == 'PSR3'], 'PSR3', start_time, end_time)
 
     # Set title and format the x-axis
-    ax.set_title(f"Activity Timeline on {date} ({start_time} - {end_time})")
+    ax.set_title(f"Activity Timeline ({start_time} - {end_time})")
     ax.xaxis_date()
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
     ax.set_xlim(start_time, end_time)

@@ -1,5 +1,9 @@
 # LevelZeroAnalysis
 
+## RESULTS:
+
+![Alt text](./img/analysis.png)
+
 
 # Methodology
 
@@ -44,10 +48,6 @@ This project processes a dataset of 911 incidents responcees and analyzes the ti
 - Total number of incidents.
 - Average wait time.
 - Number of incidents where the wait time was 5+ minutes, 10+ minutes, and 15+ minutes.
-
-# RESULTS:
-
-![Alt text](analysis.png)
 
 ---
 
