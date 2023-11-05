@@ -104,19 +104,21 @@ def merge_arrivals(data: pd.DataFrame) -> pd.DataFrame:
     merged = pd.merge(pfr_min_arrival, amr_min_arrival, on='incident', how='outer', suffixes=('_pfr', '_amr'))
 
     # Define a function to calculate wait time
-    def calculate_wait_time(row):
-        if pd.isna(row['arrival_pfr']) or pd.isna(row['arrival_amr']):
-            # If either agency was cleared before arrival, set wait time to NaN or another placeholder
-            return np.nan
-        else:
-            # If both agencies arrived, calculate the wait time normally
-            return (row['arrival_amr'] - row['arrival_pfr']).total_seconds()
+    # def calculate_wait_time(row):
+    #     if pd.isna(row['arrival_pfr']) or pd.isna(row['arrival_amr']):
+    #         # If either agency was cleared before arrival, set wait time to NaN or another placeholder
+    #         return np.nan
+    #     else:
+    #         # If both agencies arrived, calculate the wait time normally
+    #         return (row['arrival_amr'] - row['arrival_pfr']).total_seconds()
 
     # Calculate 'wait_seconds' for each row
-    merged['wait_seconds'] = merged.apply(calculate_wait_time, axis=1)
+    # merged['wait_seconds'] = merged.apply(calculate_wait_time, axis=1)
 
     # Replace negative wait times with 0
-    merged['wait_seconds'] = merged['wait_seconds'].apply(lambda x: max(0, x))
+    # merged['wait_seconds'] = merged['wait_seconds'].apply(lambda x: max(0, x))
+
+    merged.to_csv(f'{CURRENT_PATH}/merged_arrivals.csv', index=True)
 
     log.debug("MERGED ARRIVALS")
     log.debug(merged.head())
@@ -154,9 +156,29 @@ def calculate_wait_times(merged: pd.DataFrame) -> pd.DataFrame:
                           merged['arrival_pfr'].dt.isocalendar().week.astype(str).str.zfill(2)
     
     log.debug("WAIT TIMES")
-    log.debug(merged.head())
+    # log.debug(merged.head())
+    log.debug(merged)
     return merged
 
+
+
+def clean_merged_arrivals(merged: pd.DataFrame) -> pd.DataFrame:
+    # Remove rows where there is no PF&R arrival time
+    # cleaned_merged = merged.dropna(subset=['arrival_pfr'])
+    # clean_merged_arrivals = merged[merged['arrival_pfr'].notnull()]
+
+    # data_types = merged['arrival_pfr'].apply(type).unique()
+    cleaned_merged = merged[merged['arrival_pfr'].notna()]
+    # print(data_types)
+
+    # cleaned_merged = merged[merged['arrival_pfr'] != '']
+
+    cleaned_merged.to_csv(f'{CURRENT_PATH}/merged_arrivals_cleaned.csv', index=True)
+
+    log.debug("CLEANED MERGED ARRIVALS")
+    log.debug(cleaned_merged.head())
+    
+    return cleaned_merged
 
 
 
@@ -201,6 +223,8 @@ def main():
     data_with_amr_and_pfr = filter_out_incidents_without_pfr(data_with_amr)
 
     merged_arrivals = merge_arrivals(data_with_amr_and_pfr)
+    merged_arrivals = clean_merged_arrivals(merged_arrivals)
+
     wait_times = calculate_wait_times(merged_arrivals)
 
     for min_wait in [1, 5, 10, 15]:
