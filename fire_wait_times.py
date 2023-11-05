@@ -5,8 +5,8 @@ pd.set_option('display.max_rows', None)
 dataset_filename = "condensed-large"
 
 # PATH = "/Users/micah/My Drive/DATA/INTTERRA" # io
-# PATH = "/Users/myca/My Drive/DATA/INTTERRA" # Jupiter
-PATH = "/Users/myca/Downloads" # Jupiter downloads
+PATH = "/Users/myca/My Drive/DATA/INTTERRA" # Jupiter
+# PATH = "/Users/myca/Downloads" # Jupiter downloads
 full_path = f"{PATH}/{dataset_filename}.csv"
 
 print(F"\n\n------------------------------------------")

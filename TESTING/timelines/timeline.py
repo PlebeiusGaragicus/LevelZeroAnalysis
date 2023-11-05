@@ -66,9 +66,3 @@ def visualize_timeline(file_path, units: list, date: str, start_time: str = '00:
     # plt.tight_layout()
     # plt.show()
     plt.savefig(f"./Timeline {date}", bbox_inches='tight', dpi=300)
-
-
-
-
-# visualize_timeline("/Users/myca/My Drive/DATA/INTTERRA/condensed-large.csv", ['E19', 'E11', 'E1', 'E3', 'T3'], '2023-06-11')
-visualize_timeline("/Users/myca/My Drive/DATA/INTTERRA/condensed-large.csv", ['M304', 'M309', 'M306', 'M311', 'M329', 'M348'], '2021-06-11')
