@@ -1,9 +1,2 @@
-pandas
+docopt
 numpy
-folium
-matplotlib
-geopandas
-shapely
-sklearn
-
-taipy

@@ -3,4 +3,4 @@
 source venv/bin/activate
 
 export DEBUG=true
-python3 -m pipeline
+python3 -m analysis_pipeline waittimes "$1"
