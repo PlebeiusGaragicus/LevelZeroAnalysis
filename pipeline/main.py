@@ -19,15 +19,6 @@ def load_data(path: str, filename: str) -> pd.DataFrame:
     return data
 
 
-
-# def filter_out_incidents_without_amr(data: pd.DataFrame) -> pd.DataFrame:
-#     # Check for rows where the 'agency' is AMR and there is a dispatch time
-#     has_amr_dispatched = data['juris4'].str.contains('AMR') & data['dispatch'].notnull()
-    
-#     # Keep only incidents where an AMR was dispatched
-#     return data[has_amr_dispatched.groupby(data['incident']).transform('any')]
-
-
 def filter_out_incidents_without_amr(data: pd.DataFrame) -> pd.DataFrame:
     # Check for rows where the 'agency' is AMR and there is a dispatch time
     has_amr_dispatched = data['juris4'].str.contains('AMR') & data['dispatch'].notnull()
@@ -41,12 +32,10 @@ def filter_out_incidents_without_amr(data: pd.DataFrame) -> pd.DataFrame:
     log.info(f"Logged {len(incidents_without_amr)} incidents without AMR dispatch")
 
     print("KEEPING THESE RECORDS GOING FORWARD:")
-    print(data[incidents_with_amr])
+    print(data[incidents_with_amr].head())
 
     # Keep only incidents where an AMR was dispatched
     return data[incidents_with_amr]
-
-
 
 
 def filter_out_incidents_without_pfr(data: pd.DataFrame) -> pd.DataFrame:
@@ -62,33 +51,11 @@ def filter_out_incidents_without_pfr(data: pd.DataFrame) -> pd.DataFrame:
     log.info(f"Logged {len(incidents_without_pfr)} incidents without PF&R dispatch")
 
     print("KEEPING THESE RECORDS GOING FORWARD:")
-    print(data[incidents_with_pfr])
+    print(data[incidents_with_pfr].head())
 
     # Keep only incidents where PF&R was dispatched
     return data[incidents_with_pfr]
 
-
-
-# def merge_arrivals(data: pd.DataFrame) -> pd.DataFrame:
-#     # Filter AMR and PF&R data
-#     amr_data = data[data['juris4'] == "AMR"]
-#     pfr_data = data[data['juris4'] == "PF&R"]
-
-#     # Group by 'incident' to find the minimum 'arrival' and take the 'incidentType' as well
-#     amr_min_arrival = amr_data.groupby('incident').agg({'arrival': 'min', 'incidentType': 'first'})
-#     pfr_min_arrival = pfr_data.groupby('incident').agg({'arrival': 'min', 'incidentType': 'first'})
-
-#     # Merge the two DataFrames on the 'incident' column while keeping all columns
-#     merged = pd.merge(pfr_min_arrival, amr_min_arrival, on=['incident', 'incidentType'], how='outer', suffixes=('_pfr', '_amr'))
-
-#     # Calculate 'wait_seconds' making sure that we handle NaT values
-#     merged['wait_seconds'] = (merged['arrival_amr'] - merged['arrival_pfr']).dt.total_seconds().fillna(0)
-#     merged['wait_seconds'] = merged['wait_seconds'].apply(lambda x: max(0, x))
-
-#     log.debug("MERGED ARRIVALS")
-#     log.debug(merged.head())
-
-#     return merged
 
 
 def merge_arrivals(data: pd.DataFrame) -> pd.DataFrame:
@@ -103,37 +70,12 @@ def merge_arrivals(data: pd.DataFrame) -> pd.DataFrame:
     # Merge the two DataFrames on the 'incident' column while keeping all columns
     merged = pd.merge(pfr_min_arrival, amr_min_arrival, on='incident', how='outer', suffixes=('_pfr', '_amr'))
 
-    # Define a function to calculate wait time
-    # def calculate_wait_time(row):
-    #     if pd.isna(row['arrival_pfr']) or pd.isna(row['arrival_amr']):
-    #         # If either agency was cleared before arrival, set wait time to NaN or another placeholder
-    #         return np.nan
-    #     else:
-    #         # If both agencies arrived, calculate the wait time normally
-    #         return (row['arrival_amr'] - row['arrival_pfr']).total_seconds()
-
-    # Calculate 'wait_seconds' for each row
-    # merged['wait_seconds'] = merged.apply(calculate_wait_time, axis=1)
-
-    # Replace negative wait times with 0
-    # merged['wait_seconds'] = merged['wait_seconds'].apply(lambda x: max(0, x))
-
     merged.to_csv(f'{CURRENT_PATH}/merged_arrivals.csv', index=True)
 
     log.debug("MERGED ARRIVALS")
     log.debug(merged.head())
 
     return merged
-
-
-# def calculate_wait_times(merged: pd.DataFrame) -> pd.DataFrame:
-#     merged['wait_time_minutes'] = (merged['wait_seconds'] / 60).round(1)
-#     merged['year_week'] = merged['arrival_pfr'].dt.isocalendar().year.astype(str) + '-W' + \
-#                           merged['arrival_pfr'].dt.isocalendar().week.astype(str).str.zfill(2)
-    
-#     log.debug("WAIT TIMES")
-#     log.debug(merged.head())
-#     return merged
 
 
 
@@ -151,27 +93,27 @@ def calculate_wait_times(merged: pd.DataFrame) -> pd.DataFrame:
     # Calculate 'wait_time_minutes' based on updated 'wait_seconds'
     merged['wait_time_minutes'] = (merged['wait_seconds'] / 60).round(1)
     
-    # Generate 'year_week' based on 'arrival_pfr'
-    merged['year_week'] = merged['arrival_pfr'].dt.isocalendar().year.astype(str) + '-W' + \
-                          merged['arrival_pfr'].dt.isocalendar().week.astype(str).str.zfill(2)
+    # # Generate 'year_week' based on 'arrival_pfr'
+    # merged['year_week'] = merged['arrival_pfr'].dt.isocalendar().year.astype(str) + '-W' + \
+    #                       merged['arrival_pfr'].dt.isocalendar().week.astype(str).str.zfill(2)
+
+    # Adjust 'year_week' to consider Sunday as the first day of the week
+    # Offset 'arrival_pfr' by one day if it's a Sunday
+    merged['adjusted_date'] = merged['arrival_pfr'].apply(lambda x: x - pd.Timedelta(days=1) if x.weekday() == 6 else x)
+    merged['year_week'] = merged['adjusted_date'].dt.strftime('%Y-W%U')
     
+    # Drop the 'adjusted_date' column as it is no longer needed
+    merged.drop(columns=['adjusted_date'], inplace=True)
+
     log.debug("WAIT TIMES")
     # log.debug(merged.head())
-    log.debug(merged)
+    log.debug(merged.head())
     return merged
 
 
 
 def clean_merged_arrivals(merged: pd.DataFrame) -> pd.DataFrame:
-    # Remove rows where there is no PF&R arrival time
-    # cleaned_merged = merged.dropna(subset=['arrival_pfr'])
-    # clean_merged_arrivals = merged[merged['arrival_pfr'].notnull()]
-
-    # data_types = merged['arrival_pfr'].apply(type).unique()
     cleaned_merged = merged[merged['arrival_pfr'].notna()]
-    # print(data_types)
-
-    # cleaned_merged = merged[merged['arrival_pfr'] != '']
 
     cleaned_merged.to_csv(f'{CURRENT_PATH}/merged_arrivals_cleaned.csv', index=True)
 
@@ -181,14 +123,54 @@ def clean_merged_arrivals(merged: pd.DataFrame) -> pd.DataFrame:
     return cleaned_merged
 
 
-
 def filter_incidents(merged: pd.DataFrame, min_wait: int) -> pd.DataFrame:
     return merged[merged['wait_time_minutes'] >= min_wait]
 
 
-def incidents_by_week(merged: pd.DataFrame) -> pd.DataFrame:
-    counts = merged.groupby('year_week').size()
-    return counts.reset_index(name='incidents')
+# def incidents_by_week(merged: pd.DataFrame, wait_time) -> pd.DataFrame:
+#     # counts = merged.groupby('year_week').size()
+#     counts = merged[merged['wait_time_minutes'] >= wait_time].groupby('year_week').size()
+
+#     # add a date range column
+#     print(counts.head())
+#     counts = counts.reset_index()
+#     counts['date_range'] = counts['year_week'].apply(lambda x: pd.to_datetime(x + '-0', format='%Y-W%W-%w'))
+
+#     return counts.reset_index(name='incidents')
+
+def incidents_by_week(merged: pd.DataFrame, wait_time_threshold: int) -> pd.DataFrame:
+    # Get the counts of incidents by week where the wait time exceeds the threshold
+    incident_counts = merged[merged['wait_time_minutes'] >= wait_time_threshold].groupby('year_week').size()
+
+    # Reset index to convert Series to DataFrame
+    incident_counts = incident_counts.reset_index(name='incidents')
+
+    # Function to calculate the start (Monday) of the week
+    def get_week_start_date(year_week_str):
+        year, week = map(int, year_week_str.split('-W'))
+        # For ISO weeks, %G-W%V-%u format ensures Monday as the first day of the week
+        return pd.to_datetime(f'{year}-W{week}-1', format='%G-W%V-%u')
+
+    # Calculate start and end dates of the week
+    incident_counts['start_date'] = incident_counts['year_week'].apply(get_week_start_date)
+    incident_counts['end_date'] = incident_counts['start_date'] + pd.to_timedelta('6 days')
+
+    # Create a date range string
+    incident_counts['date_range'] = incident_counts.apply(
+        lambda x: f"{x['start_date'].strftime('%b %d')} - {x['end_date'].strftime('%b %d, %Y')}", axis=1
+    )
+
+    incident_counts.drop(columns=['start_date', 'end_date'], inplace=True)
+
+    # rearrange 'date_range' to come first
+    cols = incident_counts.columns.tolist()
+    cols = cols[-1:] + cols[:-1]
+    incident_counts = incident_counts[cols]
+
+    # TODO: would be nice to add weather data to give additional context
+
+    return incident_counts
+
 
 
 def export_data(df: pd.DataFrame, path: str, filename: str):
@@ -198,10 +180,7 @@ def export_data(df: pd.DataFrame, path: str, filename: str):
 
 
 def print_analysis(merged: pd.DataFrame):
-    # print(merged.columns)
-    # print(merged.head())
 
-    # total_incidents = len(merged)
     # total_unique_incidents = merged['incident'].nunique()
     # NOTE: 'incident' is not a column but the DataFrame's index. 
     total_unique_incidents = merged.index.nunique()
@@ -231,6 +210,7 @@ def main():
         incidents = filter_incidents(wait_times, min_wait)
         export_data(incidents, CURRENT_PATH, f"export_wait_times_{min_wait}_min.csv")
 
-    weekly_incidents = incidents_by_week(wait_times)
-    export_data(weekly_incidents, CURRENT_PATH, "export_incidents_by_week.csv")
+    wait_time=10
+    weekly_incidents = incidents_by_week(wait_times, wait_time)
+    export_data(weekly_incidents, CURRENT_PATH, f"export_incidents_by_week ({wait_time} minutes).csv")
     print_analysis(merged_arrivals)

@@ -2,8 +2,8 @@ DISPLAY_MAX_ROWS = None
 
 # DATASET_FILENAME = "condensed-large" # TOO LARGE!!!! :(
 
-DATASET_FILENAME = "data-sample"
-# DATASET_FILENAME = "2023 (YTD) (trimmed)"
+# DATASET_FILENAME = "data-sample"
+DATASET_FILENAME = "2023 (YTD) (trimmed)"
 
 PATHS = {
     "io": "/Users/micah/My Drive/DATA/INTTERRA",
