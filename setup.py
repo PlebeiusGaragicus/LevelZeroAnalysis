@@ -23,7 +23,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'pipeline=pipeline:main',
+            'pipeline=main:main',
         ],
     },
 )

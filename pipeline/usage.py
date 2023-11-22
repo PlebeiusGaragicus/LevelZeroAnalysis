@@ -3,8 +3,9 @@ Data Science Pipeline.
 
 Usage:
   pipeline waittimes <filename>
-  pipeline analysis_pipeline (-h | --help)
-  pipeline analysis_pipeline --version
+  pipeline levelstatus <filename>
+  pipeline (-h | --help)
+  pipeline --version
 
 Options:
   -h --help     Show this screen.
