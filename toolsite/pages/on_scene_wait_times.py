@@ -1,11 +1,20 @@
+import os
+import logging
+log = logging.getLogger()
+
 import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 
-def load_validate(file):
-    # log.debug(f"file: {file}")
 
-    data = pd.read_csv(file, delimiter='\t', encoding='utf-8', encoding_errors='replace')
+def load_validate(file, delimiter):
+    """
+    This function both loads
+    """
+    data = pd.read_csv(file, delimiter=delimiter, encoding='utf-8', encoding_errors='replace')
 
     # truncate miliseconds in "Activity Date" column (eg. 2023-11-01 00:07:16.553600 to 2023-11-01 00:07:16)
     data['Activity Date'] = data['Activity Date'].astype(str).str[:-5]
@@ -30,7 +39,11 @@ def load_validate(file):
     return data
 
 
-###########
+
+#
+#
+#
+#
 def page():
     """ This is the page code and entry-point for this module """
     st.write("# Fire Crew on-scene wait times")
@@ -46,30 +59,36 @@ def page():
         uploaded_file = st.file_uploader("Choose a file")
     
     with opts_col:
-        option = st.selectbox('Resampling interval (minutes)', ["Don't resample", '2', '5', '10', '15', '30'], index=2)
-        if option == "Don't resample":
-            option = None
-    
+        wait_time = st.selectbox('Wait time (minutes)', ["0.1", '2', '5', '12'], index=3)
+        delimiter = st.selectbox('Delimiter', ['comma', 'tab', 'space'], index=1)
+        if delimiter == 'comma':
+            delimiter = ','
+        elif delimiter == 'tab':
+            delimiter = '\t'
+        elif delimiter == 'space':
+            delimiter = ' '
+
     st.divider()
     process_data_action = st.button("Process data :point_left:")
 
     if process_data_action:
-        process_data(uploaded_file, option)
+        process_data(uploaded_file, wait_time, delimiter)
 
 
 
-###############################
-def process_data(uploaded_file, option):
+
+#
+#
+#
+#
+def process_data(uploaded_file, wait_time, delimiter):
 
     if uploaded_file is not None:
-        data = load_validate(uploaded_file)
+        data = load_validate(uploaded_file, delimiter)
     else:
         st.warning('No file uploaded!', icon="⚠️")
         return
 
-
     st.divider()
     with st.expander("### :technologist: cleaning data"):
         st.write("place holder...")
-
-    st.write("### END...")
