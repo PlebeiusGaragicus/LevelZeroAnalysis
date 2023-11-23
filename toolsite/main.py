@@ -23,6 +23,8 @@ def main():
     logging.getLogger("fsevents").setLevel(logging.WARNING)
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
+    st.set_page_config(page_title="My Webpage", page_icon=": tada: " , layout="wide" )
+
     with st.sidebar:
         st.title("Portland Fire and Rescue Data Analysis Tools")
 
