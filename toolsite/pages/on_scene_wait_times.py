@@ -2,10 +2,11 @@ import os
 import logging
 log = logging.getLogger()
 
-import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+import streamlit as st
 
 
 EXPLANATION = """
@@ -118,6 +119,11 @@ def process_data(uploaded_file, wait_time, delimiter):
 
     incident_resp = create_incident_responses(data)
 
+    late_arrivals = incident_resp[incident_resp["MD OS"] > incident_resp["RP OS"] + pd.Timedelta(minutes=int(wait_time))]
+    st.write(f"### :fire_engine: {len(late_arrivals):,} late arrivals")
+
+    incident_resp = calculate_wait_times(incident_resp, int(wait_time))
+
 
 
 ##############################################################################
@@ -189,9 +195,9 @@ def drop_and_arrange(df: pd.DataFrame) -> pd.DataFrame:
         # keep rows with "Station Jurisdiction" == "RP" or "MD"
         df = df[df["Station Jurisdiction"].isin(["RP", "MD"])]
 
-        st.write(":arrow_forward: Drop BLS units")
-        # drop "station" column with "715B" values
+        st.write(":arrow_forward: Drop BLS units and CHD units")
         df = df[df["Station"] != "715B"]
+        df = df[df["Station"] != "CHD"]
 
         st.write(":arrow_forward: Create an 'Incident Number' column from 'Call Jurisdiction' and 'Call Number' columns")
         # incident number column should combine "Call Jurisdiction" and "Call Number" columns and ensure call number has leading zeros to make it 8 digits
@@ -253,26 +259,74 @@ def create_incident_responses(df: pd.DataFrame) -> pd.DataFrame:
     pivot_table.columns.name = None  # Remove the name of the columns level
 
     # Filtering for the specified columns
-    filtered_columns = ['Incident Number', 'RP DP', 'RP ER', 'RP OS', 'RP AV', 'MD DP', 'MD ER', 'MD OS']
+    # filtered_columns = ['Incident Number', 'RP DP', 'RP ER', 'RP OS', 'RP AV', 'MD DP', 'MD ER', 'MD OS']
+    filtered_columns = ['Incident Number', 'RP DP', 'RP ER', 'RP OS', 'MD DP', 'MD ER', 'MD OS']
     final_incident_response_df = pivot_table[filtered_columns]
 
     # Filtering the dataframe to include only those rows with at least one RP and one MD response
-    rp_columns = ['RP DP', 'RP ER', 'RP OS', 'RP AV']
+    # rp_columns = ['RP DP', 'RP ER', 'RP OS', 'RP AV']
+    rp_columns = ['RP DP', 'RP ER', 'RP OS']
     md_columns = ['MD DP', 'MD ER', 'MD OS']
 
     # Applying the filter
     filtered_incident_df = final_incident_response_df.dropna(subset=rp_columns, how='all').dropna(subset=md_columns, how='all')
 
-    filtered_incident_df = filtered_incident_df[ filtered_incident_df['Incident Number'] != ' 0000<NA>']
     #  df[df["Activity Type"] != "S"]
+    # filtered_incident_df = filtered_incident_df[ filtered_incident_df['Incident Number'] != ' 0000<NA>']
 
-    # Display the first few rows of the final incident response dataframe
-    filtered_incident_df.head()
+
+    # drop rows with "RP OS" or "MD OS" values are blank (This is when they clear before arrival on scene)
+    filtered_incident_df = filtered_incident_df[filtered_incident_df["RP OS"].notna()]
+    filtered_incident_df = filtered_incident_df[filtered_incident_df["MD OS"].notna()]
+
+    # if "RP OS" is after "MD OS" then drop the row
+    filtered_incident_df = filtered_incident_df[filtered_incident_df["RP OS"] < filtered_incident_df["MD OS"]]
+
+    filtered_incident_df.reset_index(drop=True, inplace=True)
 
     with st.expander("Show final incident response dataframe"):
+        st.write("Creating a 'pivot table' to collate incident responces...")
+        st.write("Dropping rows where either RP or MD cleared prior to arrival...") # TODO - what if we waited on scene for 12 minutes and then CLEARED THE AMUBLANCE?
+        st.write("Dropping rows where RP arrived AFTER MD...")
         st.write(filtered_incident_df)
 
     return filtered_incident_df
+
+
+
+def calculate_wait_times(df: pd.DataFrame, wait_time: int) -> pd.DataFrame:
+
+    # add a row called "Wait Time" that is the difference between "MD OS" and "RP OS"
+    df["Wait Time"] = pd.to_datetime(df["MD OS"]) - pd.to_datetime(df["RP OS"])
+
+    # convert the "Wait Time" column to seconds
+    df["Wait Time"] = df["Wait Time"].dt.total_seconds()
+
+    # drop rows with a wait time less than wait_time seconds
+    df = df[df["Wait Time"] >= wait_time * 60]
+
+    # convert "Wait Time" column to minutes and round to 1 decimal place
+    df["Wait Time"] = (df["Wait Time"] / 60).round(1)
+
+    df = df[[
+        "Incident Number",
+        "RP OS",
+        "MD OS",
+        "Wait Time"
+    ]]
+
+    # reset index
+    df.reset_index(drop=True, inplace=True)
+
+    with st.expander("Show final dataframe with wait times"):
+        st.write("Adding a 'Wait Time' column that is the difference between 'MD OS' and 'RP OS'...")
+        st.write(f"### :fire_engine: {len(df):,} late arrivals")
+        st.write(df)
+
+    return df
+
+
+
 
 
 
@@ -306,4 +360,20 @@ Each row should have a unique call number.  As in, each status update should be 
 ---
 
 This looks great so far.  Let's add it to by removing every call number row where there is no RP response or no MD response.  In other words, I only want to show rows that include BOTH RP and MD units.
+"""
+
+
+
+example_calls = """
+
+118432 - orig dispatched as a gresham call, but E31 eventually added.  Therefore, no dispatch time.
+
+117662 - no ER time for PFR - why?  They didn't push En Route on MDT
+
+RP00116255 - No DP or ER times, apparently E1 was on-scene already and just requested an ambulance?
+
+RP00118513 - E18 went from OS to IQ.  They didn't clear from call, they drove while OS to the station.
+
+RP00118093 - E17 had a FF go with AMR and drove to EM while in OS status.
+
 """
